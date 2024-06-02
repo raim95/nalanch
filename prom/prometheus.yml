@@ -1,0 +1,11 @@
+global:
+  # Выставляем интервал сбора метрик
+  scrape_interval:     15s
+  # Выставляем интервал рассчёта метрик
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      # Ставим таргетом для сбора метрик айпи хоста + порт, на котором будет node_exporter
+      - targets: ['10.11.12.1:9100']

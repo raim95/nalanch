@@ -1,0 +1,71 @@
+- name: Install NodeExporter
+  hosts: localhost
+  become: true
+  tasks:
+    # Скачиваем архив с Node Exporter
+    - name: Download Node Exporter binary
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v1.8.1/node_exporter-1.8.1.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+
+    # Создаём папку, куда будем распаковывать архив
+    - name: Create directory for Node Exporter
+      file:
+        path: /opt/node_exporter
+        state: directory
+
+    # Распаковываем архив
+    - name: Extract Node Exporter binary
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /opt/node_exporter
+        remote_src: yes
+
+    # Переносим бинарь Node Exporter в папку, чтобы можно было запускать по имени файла
+    - name: Move Node Exporter binary to /usr/local/bin
+      command: mv /opt/node_exporter/node_exporter-1.8.1.linux-amd64/node_exporter /usr/local/bin/node_exporter
+      args:
+        creates: /usr/local/bin/node_exporter
+
+    # Создаём файл демона, чтобы Node Exporter запускался при старте системы (и перезапускался при падении)
+    - name: Create systemd service file for Node Exporter
+      copy:
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=nobody
+          ExecStart=/usr/local/bin/node_exporter
+          ExecReload=/bin/kill -HUP $MAINPID
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/node_exporter.service
+
+    # Считываем конфиг файлы демонов, чтобы система узнала про Node Exporter
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+
+    # Запускаем Node Exporter
+    - name: Enable and start Node Exporter
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+
+# Запускаем Prometeus и Grafana
+- name: Start Prom&Grafana
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Start Prom&Grafana
+      # Используем модуль docker_compose_v2, который устанавливали в Vagrantfile (стр 49)
+      community.docker.docker_compose_v2:
+        # Указываем папку, где искать файл docker-compose.yml
+        project_src: .
+        # Указываем название проекта, произвольное, будет использоваться в названии контейнеров
+        project_name: nalanch

@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+        # Название указываем произвольное, но уникальное в рамках раздела providers
+        - name: 'node_exporter'
+          type: file
+          # Указываем, где лежит json c нужным дашбордом (скачиваем  json в Dockerfile, 4 стр)
+          options:
+                  path: /var/lib/grafana/dashboards
